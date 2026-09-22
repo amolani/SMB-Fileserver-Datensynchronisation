@@ -4,7 +4,7 @@ Am 22.09.2026 wurde der vorhandene Produktionsquellcode lesend übernommen. Die 
 
 Der Tag `production-import-2026-09-22` enthält diesen ursprünglichen Quellstand mit neutraler Beispielkonfiguration. Er dokumentiert die Herkunft und ist keine Empfehlung, diese ältere Fassung neu auszurollen.
 
-| Bereich | Produktionsfassung | Aktuelle Fassung |
+| Bereich | Bisherige Produktionsfassung | Aktuelle Fassung |
 |---|---|---|
 | Konfiguration und Build | Externe Properties, eigenständiger Java-17-Build | Beibehalten; Validierung und `--config`/`--check-config` ergänzt |
 | Audit-Fortschritt | Nur RAM; Neustart überspringt vorhandene Einträge | Lesestand und angenommene Aufträge gemeinsam in einem synchronisierten Journal |
@@ -19,10 +19,10 @@ Der Tag `production-import-2026-09-22` enthält diesen ursprünglichen Quellstan
 | Löschungen | Verzeichnis-rsync mit `--delete-delay`; remote `rm -rf` | Keine pauschalen rsync-Löschungen; explizite Audit-Löschungen nur bei aktivierter Option und geprüften Pfaden |
 | Rename | Risiko durch zusammengefasste Operationen und temporäre Dateien | Kopieren vor Löschen; Save-via-Temp bleibt erhalten; bekannte Rename-Ketten werden aufgelöst |
 | Verbindungsprüfung | Positive/negative Erreichbarkeit dauerhaft gecacht | Kurzer Cache mit Ablauf und Invalidierung bei Fehlern |
-| SSH | Genereller Zugriff auf das Host-SSH-Verzeichnis | Einzelne dedizierte Schlüssel-/Known-Hosts-Dateien, strikte Hostprüfung und geschützte Argumente |
+| SSH | Genereller Zugriff auf das Host-SSH-Verzeichnis | Einzeln eingebundene Schlüssel-/Known-Hosts-Dateien, strikte Hostprüfung und geschützte Argumente |
 | Laufzeit | Schreibbarer Quellmount, wenig Container-Grenzen | Quellmount und Root-Dateisystem schreibgeschützt, persistentes State-Volume, Speicher-/PID-/Log-Grenzen |
 | Tests | Keine automatisierte Regression im Verzeichnis | Java-Regressionen, echter Prozessabbruch/Wiederanlauf, rsync- und isolierter Container-Test, GitHub CI |
 
 Die tatsächlichen Audit-Formate wurden ohne Ausgabe von Benutzer-/Dateinamen gezählt: In einer Stichprobe passten 2.521 Datensätze zum Parserformat; Schreib-, Verzeichnis- und Löschoperationen hatten sechs Felder, Umbenennungen sieben, und die Pfade waren absolut. Das ersetzt keinen vollständigen Last-/Abnahmetest auf allen Standorten.
 
-Auf dem Produktionssystem wurden keine Quellen, Konfigurationen, Container oder Dienste verändert. Ein Rollout der neuen Fassung ist ein eigener, noch ausstehender Schritt nach Klärung der Schreibtopologie und Staging-Abnahme.
+Der erste Quellenabgleich erfolgte ausschließlich lesend. Anschließend wurden alle drei Standorte abgeglichen und dieselben sechs Klassendateien in ihren bisherigen laufenden JARs nachgewiesen. Nach Klärung der Schreibtopologie und erfolgreichen Tests über die echten direkten und Relay-Verbindungen wurde die neue Fassung am selben Tag auf allen drei Hosts aktiviert. Einzelheiten und Grenzen stehen im [Rollout-Bericht](ROLLOUT-2026-09-22.md).

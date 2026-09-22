@@ -2,7 +2,7 @@
 
 Samba-Audit-basierte Dateisynchronisation mit Java 17, rsync und OpenSSH. Der am 22.09.2026 abgeglichene Produktionsquellstand ist als Tag `production-import-2026-09-22` erhalten. `main` ergänzt persistente Aufträge, automatische Wiederholung, gespeicherte Lesestände und Schutzmaßnahmen für Betrieb und Pfade.
 
-**Status:** Der neue Stand wird automatisiert und in isolierten lokalen Containern geprüft. Er ist noch nicht auf dem Produktionssystem ausgerollt. Schreibzugriffe auf mehreren Standorten und Konfliktregeln müssen vor einem Rollout geklärt werden.
+**Status:** Am 22.09.2026 wurde die gehärtete Anwendung nach automatischen Tests und isolierten Übertragungstests auf drei Produktionsservern aktiviert. Die eingesetzte Topologie sieht für jede Datei nur einen schreibenden Standort vor. Den geprüften Umfang, die kurze Sync-Unterbrechung und die weiterhin bestehenden Grenzen beschreibt der [Rollout-Bericht](docs/ROLLOUT-2026-09-22.md).
 
 - Aufträge und Audit-Cursor werden gemeinsam auf Disk gesichert; bestätigte Arbeit wird je Ziel verfolgt.
 - Ein ausgefallenes Ziel behält seine Aufträge; andere Ziele können weiterarbeiten.
