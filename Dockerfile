@@ -1,10 +1,10 @@
-FROM eclipse-temurin:17-jdk-noble AS build
+FROM eclipse-temurin:25-jdk-noble AS build
 WORKDIR /src
 COPY src/main/java ./src/main/java
 COPY scripts/build.sh ./scripts/build.sh
 RUN ./scripts/build.sh
 
-FROM eclipse-temurin:17-jre-noble
+FROM eclipse-temurin:25-jre-noble
 RUN apt-get update && apt-get install -y --no-install-recommends rsync openssh-client && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /src/build/fileserversync.jar /app/application.jar
