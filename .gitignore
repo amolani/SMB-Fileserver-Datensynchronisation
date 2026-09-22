@@ -18,3 +18,5 @@ id_ed25519*
 *.key
 *.pem
 hs_err_pid*
+__pycache__/
+*.pyc

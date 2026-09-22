@@ -14,7 +14,11 @@ Das Statusverzeichnis benötigt ein lokales Dateisystem mit Dateisperren, `fsync
 
 Aufträge bleiben bei einem ausgefallenen Ziel erhalten. Wiederholungen beginnen standardmäßig nach fünf Sekunden und steigen bis auf 300 Sekunden. Gesunde Ziele arbeiten unabhängig weiter. Je Ziel bleibt die Reihenfolge seriell, einschließlich Eltern-/Kindpfaden. Der Puffer ist begrenzt: Ist er voll, bleibt der Audit-Lesestand stehen, statt Einträge zu verlieren. Daher müssen Audit-Aufbewahrung und Storage die längste geplante Störung plus Rückstand abdecken. Ein dauerhafter Ausfall kann nicht mit endlichem Speicher unbegrenzt überbrückt werden.
 
+Die Queue-Grenze gilt gemeinsam für alle offenen Aufträge. Eine lange Störung eines Ziels kann deshalb den Audit-Leser anhalten und auch neue Aufträge für gesunde Ziele verzögern. Bereits gelesene Aufträge bleiben je Ziel unabhängig. Kapazität und Log-Aufbewahrung anhand der tatsächlichen Ereignisrate dimensionieren und rechtzeitig alarmieren.
+
 `buffer.time.seconds` ist eine Verzögerung ab dem ersten akzeptierten Auftrag. Nur direkt aufeinanderfolgende, noch nicht gestartete Updates derselben Datei werden zusammengefasst. Neue Writes während einer laufenden Übertragung erhalten einen Folgeauftrag. Es gibt keine dauernd nach hinten geschobene Frist bei kontinuierlichen Schreibzugriffen.
+
+Die Compose-Konfiguration verwendet ein vom Dienst beschreibbares benanntes Docker-Volume. Bei einem eigenen Bind-Mount für `state.directory` müssen Besitzer und Schreibrechte zum Containerbenutzer passen (in dieser Konfiguration UID 0, empfohlen Modus 0700). Der Container besitzt absichtlich kein `DAC_OVERRIDE` und kann daher nicht beliebige Host-Verzeichnisse beschreiben. Journaldateien werden mit Modus 0600 angelegt.
 
 **Audit-Log und Rotation**
 

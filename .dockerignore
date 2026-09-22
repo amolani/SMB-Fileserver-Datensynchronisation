@@ -13,3 +13,5 @@ id_rsa*
 id_ed25519*
 *.key
 *.pem
+**/__pycache__
+**/*.pyc
