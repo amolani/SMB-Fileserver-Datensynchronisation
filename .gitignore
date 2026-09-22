@@ -1,0 +1,14 @@
+build/
+target/
+config.properties
+config.*.properties
+!config.example.properties
+.env
+.env.*
+!.env.example
+secrets/
+state/
+logs/
+*.jar
+*.log
+.idea/
