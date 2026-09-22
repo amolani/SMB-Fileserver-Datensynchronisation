@@ -62,3 +62,27 @@ Beim Stoppen nimmt der Dienst keine neuen Batches an und gibt Workern eine begre
 6. Neuen Dienst mit eigenem Statusvolume starten, Healthcheck und Zielzustände prüfen, danach Schreibzugriffe wieder freigeben. Niemals beide Versionen parallel gegen dieselben Ziele laufen lassen.
 
 Für einen Rollback den neuen Dienst stoppen, seinen Status erhalten und das bisherige Image mit seiner passenden Konfiguration verwenden. Die alte Version versteht das neue Journal nicht und überspringt bei ihrem Start möglicherweise Audit-Historie. Offene Aufträge und während des Wechsels entstandene Änderungen müssen deshalb kontrolliert abgeglichen werden. Ein Rollback ist kein automatischer verlustfreier Rücksprung.
+
+**Wechsel bei weiterlaufenden SMB-Zugriffen**
+
+Wenn nur die Synchronisationsdienste kurz pausieren sollen, muss der neue Lesestand bereits vor dem Stoppen des alten Dienstes festgeschrieben werden. Andernfalls würde ein erster Start am Logende die zwischenzeitlichen Benutzeränderungen überspringen. Das zusätzliche Werkzeug `MigrationCheckpoint` verwendet das Journal und den Audit-Leser der Anwendung, startet aber keine Übertragungs-Worker. Es verlangt `replay.existing.log.on.startup=false` und lehnt einen bereits initialisierten Status ab. Angefangene Logzeilen bleiben zur späteren Verarbeitung erhalten.
+
+Das Werkzeug mit dem zur eingesetzten Anwendungs-JAR passenden Quellstand bauen:
+
+```sh
+./scripts/build-migration-tools.sh
+```
+
+Die entstandene `build/filesync-migration-tools.jar` auf dem jeweiligen Server bereitstellen und über dieselbe Compose-Konfiguration und dasselbe dauerhafte Statusvolume wie den späteren Dienst einmalig aufrufen:
+
+```sh
+docker compose run --rm --no-deps \
+  -v "$PWD/build/filesync-migration-tools.jar:/app/migration-tools.jar:ro" \
+  --entrypoint java fileserversync \
+  -cp /app/application.jar:/app/migration-tools.jar \
+  org.example.MigrationCheckpoint /app/config.properties
+```
+
+Danach den alten Dienst zunächst weiterarbeiten lassen: Aufträge vor dem Checkpoint müssen seine Verzögerung und laufende Übertragungen durchlaufen haben. Den Wechsel erst durchführen, wenn dieser alte Rückstand abgearbeitet ist; das Werkzeug übernimmt die alte Speicher-Queue nicht. Anschließend den alten Container stoppen und die neue Version mit dem vorbereiteten Statusvolume starten. Neue Audit-Ereignisse seit dem Checkpoint werden dabei nachgeholt. Ein kleiner Überlappungsbereich kann erneut zugestellt werden; das entspricht der Zustellung mindestens einmal. Logdatei und rotierte Vorgänger müssen während des gesamten Übergangs erhalten bleiben.
+
+Das Verfahren ersetzt keinen historischen Bestandsabgleich. Vor dem Checkpoint fehlgeschlagene Altaufträge und vorhandene Unterschiede bleiben gesondert zu behandeln. Wird ein vorbereiteter Wechsel abgebrochen, den gespeicherten Status erhalten und den Übergang erneut prüfen, statt das Werkzeug zum Zurücksetzen aufzurufen.

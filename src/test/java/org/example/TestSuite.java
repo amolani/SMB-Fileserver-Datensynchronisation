@@ -18,7 +18,7 @@ public final class TestSuite {
     private TestSuite() { }
     public static void main(String[] args) throws Exception {
         if (args.length > 0 && args[0].equals("crash")) { crashWriter(Path.of(args[1])); return; }
-        testConfiguration(); testParser(); testJournal(); testCrashRecovery(); testTailer(); testRotation();
+        testConfiguration(); testParser(); testJournal(); testCrashRecovery(); testTailer(); testRotation(); testMigrationCheckpoint();
         testEngine(); testRetryIsolation(); testRsync(); testShellConfinement(); testTimeout();
         System.out.println("PASS: " + assertions + " assertions; durable recovery, audit rotation, ordering, transport and timeouts");
     }
@@ -176,6 +176,34 @@ public final class TestSuite {
         try (Journal j = new Journal(d)) {
             AuditTailer t = new AuditTailer(d, j); t.tick(); t.tick(); t.tick();
             check(j.size() == 3, "multiple rotations do not skip intermediate files");
+        }
+    }
+    private static void testMigrationCheckpoint() throws Exception {
+        Fixture f = new Fixture();
+        f.append(f.line("unlinkat", "ok", f.root.resolve("historical-delete"), null));
+        fails(() -> MigrationCheckpoint.initialize(f.config()), "checkpoint refuses historical replay configuration");
+        f.properties.setProperty("replay.existing.log.on.startup", "false");
+        String partial = f.line("pwrite_recv", "ok", f.file("partially-written-at-checkpoint"), null);
+        long historyEnd = Files.size(f.log);
+        f.append(partial.substring(0, partial.length() - 1));
+        Config config = f.config(); MigrationCheckpoint.initialize(config);
+        try (Journal journal = new Journal(config)) {
+            check(journal.size() == 0 && journal.cursor().offset() == historyEnd,
+                    "checkpoint skips old history but preserves the unfinished audit line");
+        }
+        fails(() -> MigrationCheckpoint.initialize(config), "checkpoint cannot overwrite an initialized state");
+        f.append("\n");
+        f.append(f.line("pwrite_recv", "ok", f.file("written-while-sync-stopped"), null));
+        Files.move(f.log, f.log.resolveSibling("audit.log.1")); Files.createFile(f.log);
+        f.append(f.line("pwrite_recv", "ok", f.file("written-after-rotation"), null));
+        try (Journal journal = new Journal(config)) {
+            AuditTailer tailer = new AuditTailer(config, journal); tailer.tick(); tailer.tick();
+            check(journal.size() == 3 && journal.cursor().offset() == Files.size(f.log),
+                    "normal startup recovers all checkpoint-era writes across rotation without historical deletes");
+        }
+        fails(() -> MigrationCheckpoint.initialize(config), "checkpoint cannot discard pending deliveries");
+        try (Journal journal = new Journal(config)) {
+            check(journal.size() == 3, "refused checkpoint preserves existing work");
         }
     }
     private static final class Fake implements RemoteActions {
