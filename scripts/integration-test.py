@@ -97,6 +97,8 @@ propagate.deletes=false
         health_env = {**env, "HEALTH_FILE": str(heartbeat)}
         assert subprocess.run([str(REPO / "scripts/healthcheck.sh")], env=health_env, capture_output=True).returncode == 0
         audit.unlink()
+        # Allow an already-completed audit read to publish its heartbeat before checking for further refreshes.
+        time.sleep(1.2)
         original_mtime = heartbeat.stat().st_mtime_ns
         time.sleep(2)
         assert heartbeat.stat().st_mtime_ns == original_mtime, "missing audit log falsely refreshed heartbeat"

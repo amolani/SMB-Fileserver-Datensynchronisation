@@ -21,7 +21,7 @@ final class Transport implements RemoteActions, AutoCloseable {
 
     @Override public void synchronize(String server, Path path) throws Exception {
         Operation.requireSafe(path, config.root);
-        if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) throw new IOException("Source disappeared before transfer: " + path);
+        if (!Operation.exists(path)) throw new IOException("Source disappeared before transfer: " + path);
         if (relayNeeded(server, false)) {
             synchronize(config.relay, path);
             // The relay executes the same relative-source transfer. A daemon is required on the last hop.
@@ -51,7 +51,7 @@ final class Transport implements RemoteActions, AutoCloseable {
     @Override public void delete(String server, Path path) throws Exception {
         Operation.requireSafe(path, config.root);
         if (!config.deletes) { Main.log("Deletion propagation disabled; retained remote path " + path); return; }
-        if (Files.exists(path, LinkOption.NOFOLLOW_LINKS)) throw new IOException("Source was recreated; refusing stale deletion: " + path);
+        if (Operation.exists(path)) throw new IOException("Source was recreated; refusing stale deletion: " + path);
         String command = deleteScript(path, config.root);
         boolean relay = relayNeeded(server, true);
         if (relay) command = quoteCommand(sshCommand(server, command, true));

@@ -3,7 +3,10 @@ package org.example;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -60,9 +63,19 @@ record Operation(Type type, Path path, Path newPath) {
         for (Path component : root.relativize(path)) {
             current = current.resolve(component);
             // A final symlink is copied as a symlink, never followed; parents must be real directories.
-            if (!current.equals(path) && Files.isSymbolicLink(current))
-                throw new IOException("Symlink in source parent: " + current);
+            if (!current.equals(path)) {
+                try {
+                    if (Files.readAttributes(current, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS).isSymbolicLink())
+                        throw new IOException("Symlink in source parent: " + current);
+                } catch (NoSuchFileException e) { break; }
+            }
         }
+    }
+
+    static boolean exists(Path path) throws IOException {
+        try { Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS); return true; }
+        catch (NoSuchFileException e) { return false; }
+        // AccessDenied, I/O failures, and other unknown states are not evidence of a deletion.
     }
 
     private static boolean temporary(Path path) {

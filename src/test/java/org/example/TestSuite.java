@@ -203,6 +203,13 @@ public final class TestSuite {
             j.accept(List.of(new Operation(Operation.Type.DELETE, recreated, null)), cursor(1)); e.apply(server, j.head(server));
             check(again.actions.size() == 1 && again.actions.get(0).startsWith("copy:"), "stale delete cannot remove a recreated source");
         }
+        Fixture invalid = new Fixture(); Config invalidConfig = invalid.config(); Fake untouched = new Fake();
+        try (Journal j = new Journal(invalidConfig); SyncEngine e = new SyncEngine(invalidConfig, j, untouched, new AtomicReference<>())) {
+            Path unreadable = invalid.root.resolve("x".repeat(300)); // A real stat error, rather than ENOENT.
+            j.accept(List.of(new Operation(Operation.Type.DELETE, unreadable, null)), cursor(1));
+            fails(() -> e.apply(server, j.head(server)), "metadata errors are not interpreted as missing source files");
+            check(untouched.actions.isEmpty(), "uncertain source state never triggers remote deletion");
+        }
         Fixture h = new Fixture(); Config k = h.config(); Fake chained = new Fake();
         Path a = h.root.resolve("a"), b = h.root.resolve("b"), z = h.file("c");
         try (Journal j = new Journal(k); SyncEngine e = new SyncEngine(k, j, chained, new AtomicReference<>())) {

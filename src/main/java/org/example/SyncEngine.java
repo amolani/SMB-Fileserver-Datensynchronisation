@@ -1,8 +1,6 @@
 package org.example;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Map;
@@ -97,7 +95,7 @@ final class SyncEngine implements AutoCloseable {
         }
     }
 
-    private static boolean exists(Path path) { return Files.exists(path, LinkOption.NOFOLLOW_LINKS); }
+    private static boolean exists(Path path) throws IOException { return Operation.exists(path); }
     boolean degraded() { return !attempts.isEmpty(); }
     @Override public void close() {
         synchronized (this) { if (closed) return; closed = true; }
