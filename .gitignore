@@ -12,3 +12,9 @@ logs/
 *.jar
 *.log
 .idea/
+known_hosts
+id_rsa*
+id_ed25519*
+*.key
+*.pem
+hs_err_pid*

@@ -1,0 +1,15 @@
+.git
+build
+config.properties
+config.*.properties
+.env*
+secrets
+state
+logs
+*.jar
+*.log
+known_hosts
+id_rsa*
+id_ed25519*
+*.key
+*.pem

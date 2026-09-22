@@ -1,20 +1,62 @@
 services:
   fileserversync:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: fileserversync-image
-    container_name: fileserversync-container
+    build: .
+    image: smb-fileserver-datensynchronisation:local
     restart: unless-stopped
-    stop_grace_period: 90s
+    read_only: true
+    stop_grace_period: 60s
+    mem_limit: 512m
+    pids_limit: 128
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_READ_SEARCH
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m,mode=1777
     volumes:
-      - /var/log/fullauditlog/samba_audit.log:/var/log/fullauditlog/samba_audit.log:ro
-      - ./config.properties:/app/config.properties:ro
-      - ~/.ssh:/root/.ssh:ro
-      - /srv/samba/schools/default-school:/srv/samba/schools/default-school:rw
+      - type: bind
+        source: ${CONFIG_FILE:-./config.properties}
+        target: /app/config.properties
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${AUDIT_LOG_DIRECTORY:-/var/log/fullauditlog}
+        target: /var/log/fullauditlog
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${SOURCE_DIRECTORY:-/srv/samba/schools/default-school}
+        target: /srv/samba/schools/default-school
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${SSH_KEY_FILE:-./secrets/id_ed25519}
+        target: /root/.ssh/id_ed25519
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${SSH_KNOWN_HOSTS_FILE:-./secrets/known_hosts}
+        target: /root/.ssh/known_hosts
+        read_only: true
+        bind:
+          create_host_path: false
+      - filesync-state:/var/lib/fileserversync
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '5'
     healthcheck:
-      test: ["CMD", "/usr/local/bin/fileserversync-healthcheck"]
-      interval: 60s
-      timeout: 10s
-      start_period: 60s
+      test: [CMD, /usr/local/bin/fileserversync-healthcheck]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
       retries: 3
+volumes:
+  filesync-state:
